@@ -1,0 +1,1787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股票做T记录器（多档案版）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0f1923;
+  color: #e0e0e0;
+  min-height: 100vh;
+  padding: 20px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+h1 {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #4fc3f7;
+  letter-spacing: 2px;
+}
+.card {
+  background: #1a2634;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  border: 1px solid #2a3a4a;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.card-title {
+  font-size: 18px;
+  color: #4fc3f7;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #2a3a4a;
+  padding-bottom: 10px;
+}
+.archive-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.archive-bar .input-group { flex: 1 1 260px; min-width: 220px; }
+.archive-bar select { min-width: 100%; }
+.archive-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.archive-actions .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  min-width: 110px;
+  padding: 10px 18px;
+}
+.btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-buy { background: #2e7d32; color: #fff; }
+.btn-buy:hover { background: #388e3c; }
+.btn-sell { background: #c62828; color: #fff; }
+.btn-sell:hover { background: #d32f2f; }
+.btn-delete {
+  background: #37474f;
+  color: #b0bec5;
+  font-size: 13px;
+  padding: 5px 12px;
+}
+.btn-delete:hover { background: #455a64; color: #fff; }
+.btn-export {
+  background: #1565c0;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 20px;
+}
+.btn-export:hover { background: #1976d2; }
+.btn-clear {
+  background: #5d4037;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 20px;
+}
+.btn-clear:hover { background: #6d4c41; }
+.btn-add {
+  background: #00695c;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 20px;
+}
+.btn-add:hover { background: #00796b; }
+.btn-rename {
+  background: #4e342e;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 20px;
+}
+.btn-rename:hover { background: #5d4037; }
+.btn-del-archive {
+  background: #4a148c;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 20px;
+}
+.btn-del-archive:hover { background: #6a1b9a; }
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.summary-item {
+  background: #0f1923;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid #2a3a4a;
+}
+.summary-item .label { font-size: 13px; color: #8a9baa; margin-bottom: 8px; }
+.summary-item .value { font-size: 24px; font-weight: bold; }
+.summary-item .value.green { color: #4caf50; }
+.summary-item .value.red { color: #f44336; }
+.summary-item .value.blue { color: #4fc3f7; }
+.input-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.input-group { flex: 1; min-width: 140px; }
+.input-group label {
+  display: block;
+  font-size: 13px;
+  color: #8a9baa;
+  margin-bottom: 6px;
+}
+.input-group input, .input-group select {
+  width: 100%;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #e0e0e0;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-group input:focus, .input-group select:focus { border-color: #4fc3f7; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+th, td {
+  padding: 10px 12px;
+  text-align: center;
+  border-bottom: 1px solid #2a3a4a;
+  font-size: 14px;
+}
+th { color: #8a9baa; font-weight: 600; background: #0f1923; }
+tr:hover { background: #1e2d3d; }
+.type-buy { color: #4caf50; font-weight: bold; }
+.type-sell { color: #f44336; font-weight: bold; }
+.profit-green { color: #4caf50; font-weight: bold; }
+.profit-red { color: #f44336; font-weight: bold; }
+.actions-row {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.empty-tip {
+  text-align: center;
+  color: #5a6a7a;
+  padding: 40px;
+  font-size: 15px;
+}
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2e7d32;
+  color: #fff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.toast.error { background: #c62828; }
+.toggle-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.toggle-btn {
+  padding: 8px 24px;
+  border: 1px solid #2a3a4a;
+  background: #0f1923;
+  color: #8a9baa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.toggle-btn.active {
+  background: #1a2634;
+  color: #4fc3f7;
+  border-color: #4fc3f7;
+}
+#inputPanel { display: none; }
+#inputPanel.show { display: block; }
+.quick-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.quick-stat {
+  font-size: 13px;
+  color: #8a9baa;
+}
+.quick-stat span { color: #4fc3f7; font-weight: bold; }
+.archive-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ffb74d;
+  margin-bottom: 4px;
+}
+.archive-sub {
+  font-size: 13px;
+  color: #8a9baa;
+  margin-bottom: 16px;
+}
+.modal-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-mask.show { display: flex; }
+.modal {
+  background: #1a2634;
+  border: 1px solid #2a3a4a;
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+}
+.modal h3 { color: #4fc3f7; margin-bottom: 16px; font-size: 18px; }
+.modal .modal-btns { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+.modal .btn-cancel { background: #37474f; color: #b0bec5; }
+.modal .btn-cancel:hover { background: #455a64; color: #fff; }
+/* 预估盈亏提示条 */
+.profit-preview {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: #0f1923;
+  border: 1px solid #2a3a4a;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.profit-preview .pp-label { font-size: 13px; color: #8a9baa; }
+.profit-preview .pp-val { font-size: 20px; font-weight: bold; }
+.profit-preview .pp-val.green { color: #4caf50; }
+.profit-preview .pp-val.red { color: #f44336; }
+.profit-preview .pp-val.blue { color: #4fc3f7; }
+.profit-preview .pp-sub { font-size: 13px; color: #8a9baa; }
+.pp-hidden { display: none !important; }
+/* 可视化分析 */
+.viz-toggle-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.viz-toggle-btn {
+  padding: 8px 24px;
+  border: 1px solid #2a3a4a;
+  background: #0f1923;
+  color: #8a9baa;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.viz-toggle-btn.active {
+  background: #1a2634;
+  color: #4fc3f7;
+  border-color: #4fc3f7;
+}
+#vizDailyPanel, #vizTotalPanel { display: none; }
+#vizDailyPanel.show, #vizTotalPanel.show { display: block; }
+.viz-panel-desc {
+  font-size: 13px;
+  color: #8a9baa;
+  margin-bottom: 14px;
+}
+.chart-box {
+  background: #0f1923;
+  border-radius: 8px;
+  border: 1px solid #2a3a4a;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.chart-box .chart-title { font-size: 14px; color: #4fc3f7; margin-bottom: 10px; }
+.chart-box canvas { width: 100%; display: block; }
+.chart-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 8px; font-size: 13px; color: #8a9baa; }
+.chart-legend span .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.viz-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.viz-stat {
+  background: #0f1923;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid #2a3a4a;
+}
+.viz-stat .vs-label { font-size: 12px; color: #8a9baa; margin-bottom: 6px; }
+.viz-stat .vs-val { font-size: 20px; font-weight: bold; }
+.viz-stat .vs-val.green { color: #4caf50; }
+.viz-stat .vs-val.red { color: #f44336; }
+.viz-stat .vs-val.blue { color: #4fc3f7; }
+.viz-empty {
+  text-align: center;
+  color: #5a6a7a;
+  padding: 40px 0;
+  font-size: 15px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📈 股票做T记录器</h1>
+
+  <!-- 档案管理 -->
+  <div class="card">
+    <div class="card-title">🗂️ 持仓档案（支持多只股票）</div>
+    <div class="archive-bar">
+      <div class="input-group">
+        <label>选择档案</label>
+        <select id="archiveSelect" onchange="switchArchive()"></select>
+      </div>
+      <div class="archive-actions">
+        <button class="btn btn-add" onclick="showAddArchive()">➕ 新增档案</button>
+        <button class="btn btn-rename" onclick="showRenameArchive()">✏️ 重命名</button>
+        <button class="btn btn-del-archive" onclick="deleteArchive()">🗑️ 删除档案</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 汇总卡片 -->
+  <div class="card">
+    <div class="archive-title" id="archiveName">-</div>
+    <div class="archive-sub" id="archiveInfo"></div>
+    <div class="card-title">📊 持仓汇总</div>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">现存股数</div>
+        <div class="value blue" id="totalShares">0</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">持仓成本</div>
+        <div class="value blue" id="avgCost">¥0.0000</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">持仓市值</div>
+        <div class="value blue" id="marketValue">¥0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">浮动盈亏</div>
+        <div class="value" id="floatingProfit">¥0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">已实现盈亏</div>
+        <div class="value" id="realizedProfit">¥0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">总盈亏</div>
+        <div class="value" id="totalProfit">¥0.00</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <div class="input-group" style="max-width:200px;">
+        <label>当前市价（用于计算浮动盈亏）</label>
+        <input type="number" id="currentPrice" step="0.001" placeholder="输入当前价格" oninput="onPriceChange()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 录入面板 -->
+  <div class="card">
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="toggleBuy" onclick="switchType('buy')">买入</button>
+      <button class="toggle-btn" id="toggleSell" onclick="switchType('sell')">卖出</button>
+    </div>
+    <div id="inputPanel" class="show">
+      <div class="input-row">
+        <div class="input-group">
+          <label>日期</label>
+          <input type="date" id="tradeDate">
+        </div>
+        <div class="input-group">
+          <label>价格（元）</label>
+          <input type="number" id="tradePrice" step="0.001" placeholder="如 1.234">
+        </div>
+        <div class="input-group">
+          <label>股数</label>
+          <input type="number" id="tradeShares" step="1" placeholder="如 1000">
+        </div>
+        <div class="input-group">
+          <label>手续费（元，可选）</label>
+          <input type="number" id="tradeFee" step="0.01" placeholder="默认0" value="0">
+        </div>
+        <button class="btn btn-buy" id="submitBtn" onclick="addTrade()">确认买入</button>
+      </div>
+      <!-- 预估盈亏提示条（卖出时实时显示） -->
+      <div class="profit-preview pp-hidden" id="profitPreview">
+        <div>
+          <div class="pp-label">预估盈亏</div>
+          <div class="pp-val blue" id="ppValue">¥0.00</div>
+        </div>
+        <div>
+          <div class="pp-label">预估卖出金额</div>
+          <div class="pp-val blue" id="ppAmount">¥0.00</div>
+        </div>
+        <div>
+          <div class="pp-label">预估手续费</div>
+          <div class="pp-val blue" id="ppFee">¥0.00</div>
+        </div>
+        <div class="pp-sub" id="ppHint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 交易记录 -->
+  <div class="card">
+    <div class="card-title">📋 交易记录</div>
+    <div class="quick-stats">
+      <div class="quick-stat">买入次数: <span id="buyCount">0</span></div>
+      <div class="quick-stat">卖出次数: <span id="sellCount">0</span></div>
+      <div class="quick-stat">买入总额: <span id="buyTotal">¥0.00</span></div>
+      <div class="quick-stat">卖出总额: <span id="sellTotal">¥0.00</span></div>
+    </div>
+    <div id="tableWrap">
+      <div class="empty-tip" id="emptyTip">暂无交易记录，请先录入买入/卖出数据</div>
+      <table id="tradeTable" style="display:none;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>日期</th>
+            <th>类型</th>
+            <th>价格</th>
+            <th>股数</th>
+            <th>金额</th>
+            <th>手续费</th>
+            <th>本次盈亏</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tradeBody"></tbody>
+      </table>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-export" onclick="exportData()">导出数据</button>
+      <button class="btn btn-clear" onclick="clearAll()">清空当前档案记录</button>
+    </div>
+  </div>
+
+  <!-- 可视化分析 -->
+  <div class="card">
+    <div class="card-title">📈 可视化分析</div>
+    <div class="viz-toggle-row">
+      <button class="viz-toggle-btn active" id="vizDailyBtn" onclick="switchViz('daily')">每日分析</button>
+      <button class="viz-toggle-btn" id="vizTotalBtn" onclick="switchViz('total')">总览分析</button>
+    </div>
+
+    <!-- 每日分析 -->
+    <div id="vizDailyPanel" class="show">
+      <div class="viz-panel-desc">按日期汇总每天的买卖操作金额及已实现盈亏，帮助观察做T节奏与每日收益。</div>
+      <div class="viz-stats-grid">
+        <div class="viz-stat"><div class="vs-label">有操作天数</div><div class="vs-val blue" id="dzDays">0</div></div>
+        <div class="viz-stat"><div class="vs-label">累计买入金额</div><div class="vs-val blue" id="dzBuyAmt">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">累计卖出金额</div><div class="vs-val blue" id="dzSellAmt">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">累计已实现盈亏</div><div class="vs-val" id="dzProfit">¥0</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">每次买卖操作金额</div>
+        <div class="chart-legend">
+          <span><span class="dot" style="background:#4caf50;"></span>买入</span>
+          <span><span class="dot" style="background:#f44336;"></span>卖出</span>
+          <span style="color:#7f8fa0;">买1/卖1=当日第1笔</span>
+        </div>
+        <canvas id="dailyAmountChart" width="1000" height="380"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">总盈亏合计（累计，初始0）</div>
+        <div class="chart-legend">
+          <span><span class="dot" style="background:#ff9800;border-radius:50%;"></span>累计已实现盈亏</span>
+          <span style="color:#7f8fa0;">买入不计盈亏，卖出计入</span>
+        </div>
+        <canvas id="dailyProfitChart" width="1000" height="380"></canvas>
+      </div>
+    </div>
+
+    <!-- 总览分析 -->
+    <div id="vizTotalPanel">
+      <div class="viz-panel-desc">汇总全部操作，看累计资金流向与整体盈亏结构。</div>
+      <div class="viz-stats-grid">
+        <div class="viz-stat"><div class="vs-label">总操作次数</div><div class="vs-val blue" id="tzOps">0</div></div>
+        <div class="viz-stat"><div class="vs-label">买入次数</div><div class="vs-val blue" id="tzBuyCnt">0</div></div>
+        <div class="viz-stat"><div class="vs-label">卖出次数</div><div class="vs-val blue" id="tzSellCnt">0</div></div>
+        <div class="viz-stat"><div class="vs-label">累计买入金额</div><div class="vs-val blue" id="tzBuyAmt">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">累计卖出金额</div><div class="vs-val blue" id="tzSellAmt">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">已实现盈亏</div><div class="vs-val" id="tzRealized">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">浮动盈亏</div><div class="vs-val" id="tzFloating">¥0</div></div>
+        <div class="viz-stat"><div class="vs-label">总盈亏</div><div class="vs-val" id="tzTotal">¥0</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">每日买入/卖出合计</div>
+        <div class="chart-legend">
+          <span><span class="dot" style="background:#4caf50;"></span>当日买入合计</span>
+          <span><span class="dot" style="background:#f44336;"></span>当日卖出合计</span>
+        </div>
+        <canvas id="totalStructureChart" width="1000" height="340"></canvas>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">盈亏构成</div>
+        <canvas id="totalProfitChart" width="1000" height="340"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新增档案弹窗 -->
+<div class="modal-mask" id="addModal">
+  <div class="modal">
+    <h3>新增持仓档案</h3>
+    <div class="input-group">
+      <label>档案名称（如：贵州茅台、600519）</label>
+      <input type="text" id="newArchiveName" placeholder="请输入股票名称/代码" maxlength="30">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="hideAddModal()">取消</button>
+      <button class="btn btn-add" onclick="doAddArchive()">确认新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- 重命名弹窗 -->
+<div class="modal-mask" id="renameModal">
+  <div class="modal">
+    <h3>重命名档案</h3>
+    <div class="input-group">
+      <label>新名称</label>
+      <input type="text" id="renameInput" placeholder="请输入新名称" maxlength="30">
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="hideRenameModal()">取消</button>
+      <button class="btn btn-add" onclick="doRenameArchive()">确认重命名</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var STORAGE_KEY = 'etf_tracker_data_v2';
+var LEGACY_KEY = 'etf_tracker_records';
+var currentType = 'buy';
+var archives = [];
+var currentArchiveId = null;
+
+function getCurrentArchive() {
+  for (var i = 0; i < archives.length; i++) {
+    if (archives[i].id === currentArchiveId) return archives[i];
+  }
+  return null;
+}
+
+function init() {
+  loadData();
+  var today = new Date();
+  var dateStr = today.getFullYear() + '-' +
+    String(today.getMonth() + 1).padStart(2, '0') + '-' +
+    String(today.getDate()).padStart(2, '0');
+  document.getElementById('tradeDate').value = dateStr;
+  renderArchiveSelect();
+  refreshAll();
+  // 预估盈亏实时监听
+  var pInputs = ['tradePrice', 'tradeShares', 'tradeFee'];
+  for (var i = 0; i < pInputs.length; i++) {
+    (function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', updateProfitPreview);
+        el.addEventListener('change', updateProfitPreview);
+      }
+    })(pInputs[i]);
+  }
+}
+
+function loadData() {
+  var saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      var data = JSON.parse(saved);
+      archives = Array.isArray(data.archives) ? data.archives : [];
+      currentArchiveId = data.currentArchiveId || null;
+      if (archives.length > 0) {
+        var ok = false;
+        for (var i = 0; i < archives.length; i++) {
+          if (archives[i].id === currentArchiveId) { ok = true; break; }
+        }
+        if (!ok) currentArchiveId = archives[0].id;
+      }
+    } catch(e) {
+      archives = [];
+      currentArchiveId = null;
+    }
+  } else {
+    var legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      try {
+        var oldRecords = JSON.parse(legacy);
+        if (Array.isArray(oldRecords)) {
+          var a = {
+            id: 'a_' + Date.now(),
+            name: '默认持仓',
+            records: oldRecords,
+            currentPrice: ''
+          };
+          archives = [a];
+          currentArchiveId = a.id;
+          localStorage.removeItem(LEGACY_KEY);
+        }
+      } catch(e2) {
+        /* ignore */
+      }
+    }
+  }
+  if (archives.length === 0) {
+    var def = {
+      id: 'a_' + Date.now(),
+      name: '默认持仓',
+      records: [],
+      currentPrice: ''
+    };
+    archives = [def];
+    currentArchiveId = def.id;
+  }
+  saveData();
+}
+
+function saveData() {
+  var data = { archives: archives, currentArchiveId: currentArchiveId };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/* ---------- 档案管理 ---------- */
+
+function renderArchiveSelect() {
+  var sel = document.getElementById('archiveSelect');
+  var html = '';
+  for (var i = 0; i < archives.length; i++) {
+    var recCount = archives[i].records.length;
+    html += '<option value="' + archives[i].id + '"' +
+      (archives[i].id === currentArchiveId ? ' selected' : '') + '>' +
+      escHtml(archives[i].name) + '（' + recCount + '条记录）</option>';
+  }
+  sel.innerHTML = html;
+}
+
+function switchArchive() {
+  var sel = document.getElementById('archiveSelect');
+  currentArchiveId = sel.value;
+  saveData();
+  refreshAll();
+  showToast('已切换到当前档案');
+}
+
+function showAddArchive() {
+  document.getElementById('newArchiveName').value = '';
+  document.getElementById('addModal').className = 'modal-mask show';
+  document.getElementById('newArchiveName').focus();
+}
+
+function hideAddModal() {
+  document.getElementById('addModal').className = 'modal-mask';
+}
+
+function doAddArchive() {
+  var name = document.getElementById('newArchiveName').value.trim();
+  if (!name) { showToast('请输入档案名称', true); return; }
+  var a = {
+    id: 'a_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+    name: name,
+    records: [],
+    currentPrice: ''
+  };
+  archives.push(a);
+  currentArchiveId = a.id;
+  saveData();
+  renderArchiveSelect();
+  document.getElementById('currentPrice').value = '';
+  refreshAll();
+  hideAddModal();
+  showToast('新档案「' + name + '」已创建');
+}
+
+function showRenameArchive() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  document.getElementById('renameInput').value = a.name;
+  document.getElementById('renameModal').className = 'modal-mask show';
+  document.getElementById('renameInput').focus();
+}
+
+function hideRenameModal() {
+  document.getElementById('renameModal').className = 'modal-mask';
+}
+
+function doRenameArchive() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  var name = document.getElementById('renameInput').value.trim();
+  if (!name) { showToast('请输入名称', true); return; }
+  a.name = name;
+  saveData();
+  renderArchiveSelect();
+  refreshAll();
+  hideRenameModal();
+  showToast('已重命名');
+}
+
+function deleteArchive() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  if (archives.length <= 1) {
+    showToast('至少保留一个档案，无法删除', true);
+    return;
+  }
+  if (!confirm('确认删除档案「' + a.name + '」？该档案的全部记录将删除，不可恢复！')) return;
+  archives = archives.filter(function(x) { return x.id !== a.id; });
+  currentArchiveId = archives[0].id;
+  saveData();
+  renderArchiveSelect();
+  refreshAll();
+  showToast('档案已删除');
+}
+
+/* ---------- 交易录入 ---------- */
+
+function switchType(type) {
+  currentType = type;
+  var toggleBuy = document.getElementById('toggleBuy');
+  var toggleSell = document.getElementById('toggleSell');
+  var submitBtn = document.getElementById('submitBtn');
+  if (type === 'buy') {
+    toggleBuy.classList.add('active');
+    toggleSell.classList.remove('active');
+    submitBtn.className = 'btn btn-buy';
+    submitBtn.textContent = '确认买入';
+  } else {
+    toggleSell.classList.add('active');
+    toggleBuy.classList.remove('active');
+    submitBtn.className = 'btn btn-sell';
+    submitBtn.textContent = '确认卖出';
+  }
+  updateProfitPreview();
+}
+
+function addTrade() {
+  var date = document.getElementById('tradeDate').value;
+  var price = parseFloat(document.getElementById('tradePrice').value);
+  var shares = parseInt(document.getElementById('tradeShares').value);
+  var fee = parseFloat(document.getElementById('tradeFee').value) || 0;
+
+  if (!date) { showToast('请选择日期', true); return; }
+  if (isNaN(price) || price <= 0) { showToast('请输入有效价格', true); return; }
+  if (isNaN(shares) || shares <= 0) { showToast('请输入有效股数', true); return; }
+
+  var a = getCurrentArchive();
+  if (!a) return;
+
+  if (currentType === 'sell') {
+    var currentShares = calcCurrentShares(a.records);
+    if (shares > currentShares) {
+      showToast('卖出股数超过现存股数（' + currentShares + '股）', true);
+      return;
+    }
+  }
+
+  var record = {
+    id: Date.now() + '_' + Math.floor(Math.random() * 100000),
+    date: date,
+    type: currentType,
+    price: price,
+    shares: shares,
+    fee: fee,
+    timestamp: Date.now()
+  };
+
+  a.records.push(record);
+  saveData();
+  renderArchiveSelect();
+  refreshAll();
+
+  document.getElementById('tradePrice').value = '';
+  document.getElementById('tradeShares').value = '';
+  document.getElementById('tradeFee').value = '0';
+
+  showToast(currentType === 'buy' ? '买入记录已添加' : '卖出记录已添加');
+}
+
+function onPriceChange() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  a.currentPrice = document.getElementById('currentPrice').value;
+  saveData();
+  updateSummary();
+}
+
+/* ---------- 计算 ---------- */
+
+function calcCurrentShares(records) {
+  var total = 0;
+  for (var i = 0; i < records.length; i++) {
+    if (records[i].type === 'buy') {
+      total += records[i].shares;
+    } else {
+      total -= records[i].shares;
+    }
+  }
+  return total;
+}
+
+function calcAvgCost(records) {
+  var buyTotal = 0;
+  var buyShares = 0;
+  for (var i = 0; i < records.length; i++) {
+    if (records[i].type === 'buy') {
+      buyTotal += records[i].price * records[i].shares + records[i].fee;
+      buyShares += records[i].shares;
+    }
+  }
+
+  var remainingShares = calcCurrentShares(records);
+  if (remainingShares <= 0 || buyShares === 0) return 0;
+
+  var soldShares = buyShares - remainingShares;
+  var avgBuyPrice = buyTotal / buyShares;
+  var soldCost = soldShares * avgBuyPrice;
+  var remainingCost = buyTotal - soldCost;
+
+  return remainingCost / remainingShares;
+}
+
+function calcRealizedProfit(records) {
+  var buyTotal = 0;
+  var buyShares = 0;
+  var sellTotal = 0;
+  var sellShares = 0;
+  var allFees = 0;
+
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    allFees += r.fee;
+    if (r.type === 'buy') {
+      buyTotal += r.price * r.shares;
+      buyShares += r.shares;
+    } else {
+      sellTotal += r.price * r.shares;
+      sellShares += r.shares;
+    }
+  }
+
+  if (buyShares === 0) return 0;
+
+  var avgBuyPrice = buyTotal / buyShares;
+  var realizedProfit = sellTotal - sellShares * avgBuyPrice - allFees;
+  return realizedProfit;
+}
+
+function calcEachRealizedProfit(records) {
+  var buyTotal = 0;
+  var buyShares = 0;
+
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    if (r.type === 'buy') {
+      buyTotal += r.price * r.shares + r.fee;
+      buyShares += r.shares;
+    }
+  }
+
+  var avgBuyPrice = buyShares > 0 ? buyTotal / buyShares : 0;
+
+  var results = [];
+  for (var j = 0; j < records.length; j++) {
+    var rec = records[j];
+    if (rec.type === 'buy') {
+      results.push(null);
+    } else {
+      var profit = rec.price * rec.shares - avgBuyPrice * rec.shares - rec.fee;
+      results.push(profit);
+    }
+  }
+  return results;
+}
+
+/* ---------- 渲染 ---------- */
+
+function refreshAll() {
+  var a = getCurrentArchive();
+  var records = a ? a.records : [];
+  document.getElementById('archiveName').textContent = a ? a.name : '-';
+  document.getElementById('archiveInfo').textContent = a ?
+    '记录数：' + records.length + ' 条 ｜ 历史记录永久保留' : '';
+  document.getElementById('currentPrice').value = a && a.currentPrice ? a.currentPrice : '';
+  renderTable(records);
+  updateSummary();
+  renderViz();
+  updateProfitPreview();
+}
+
+function updateSummary() {
+  var a = getCurrentArchive();
+  var records = a ? a.records : [];
+  var currentShares = calcCurrentShares(records);
+  var avgCost = calcAvgCost(records);
+  var realized = calcRealizedProfit(records);
+  var currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+  var marketValue = currentShares * currentPrice;
+  var floating = currentShares > 0 && currentPrice > 0
+    ? (currentPrice - avgCost) * currentShares
+    : 0;
+  var totalProfit = realized + floating;
+
+  document.getElementById('totalShares').textContent = currentShares.toLocaleString();
+  document.getElementById('avgCost').textContent = '\uFFE5' + avgCost.toFixed(4);
+  document.getElementById('marketValue').textContent = '\uFFE5' + marketValue.toFixed(2);
+
+  setProfitColor('floatingProfit', floating);
+  setProfitColor('realizedProfit', realized);
+  setProfitColor('totalProfit', totalProfit);
+
+  var buyCount = 0, sellCount = 0, buyTotal = 0, sellTotal = 0;
+  for (var i = 0; i < records.length; i++) {
+    if (records[i].type === 'buy') {
+      buyCount++;
+      buyTotal += records[i].price * records[i].shares;
+    } else {
+      sellCount++;
+      sellTotal += records[i].price * records[i].shares;
+    }
+  }
+  document.getElementById('buyCount').textContent = buyCount;
+  document.getElementById('sellCount').textContent = sellCount;
+  document.getElementById('buyTotal').textContent = '\uFFE5' + buyTotal.toFixed(2);
+  document.getElementById('sellTotal').textContent = '\uFFE5' + sellTotal.toFixed(2);
+}
+
+function setProfitColor(id, value) {
+  var el = document.getElementById(id);
+  if (value > 0) {
+    el.className = 'value green';
+    el.textContent = '\uFFE5' + value.toFixed(2);
+  } else if (value < 0) {
+    el.className = 'value red';
+    el.textContent = '\uFFE5' + value.toFixed(2);
+  } else {
+    el.className = 'value blue';
+    el.textContent = '\uFFE5' + value.toFixed(2);
+  }
+}
+/* ---------- 功能1：卖出预估盈亏实时预览 ---------- */
+
+function updateProfitPreview() {
+  var panel = document.getElementById('profitPreview');
+  if (!panel) return;
+  // 仅卖出时显示
+  if (currentType !== 'sell') {
+    panel.classList.add('pp-hidden');
+    return;
+  }
+  var price = parseFloat(document.getElementById('tradePrice').value);
+  var shares = parseInt(document.getElementById('tradeShares').value);
+  var fee = parseFloat(document.getElementById('tradeFee').value) || 0;
+  var a = getCurrentArchive();
+  if (!a) return;
+
+  var hasPrice = !isNaN(price) && price > 0;
+  var hasShares = !isNaN(shares) && shares > 0;
+
+  if (!hasPrice || !hasShares) {
+    panel.classList.remove('pp-hidden');
+    document.getElementById('ppValue').textContent = '--';
+    document.getElementById('ppAmount').textContent = '--';
+    document.getElementById('ppFee').textContent = '\uFFE5' + fee.toFixed(2);
+    document.getElementById('ppHint').textContent = '输入卖出价格和股数后自动计算预估盈亏';
+    document.getElementById('ppValue').className = 'pp-val blue';
+    return;
+  }
+
+  var currentShares = calcCurrentShares(a.records);
+  if (shares > currentShares) {
+    panel.classList.remove('pp-hidden');
+    document.getElementById('ppValue').textContent = '--';
+    document.getElementById('ppAmount').textContent = '\uFFE5' + (price * shares).toFixed(2);
+    document.getElementById('ppFee').textContent = '\uFFE5' + fee.toFixed(2);
+    document.getElementById('ppHint').textContent = '\u26A0\uFE0F 卖出股数超过现存股数（' + currentShares + '股）';
+    document.getElementById('ppValue').className = 'pp-val red';
+    return;
+  }
+
+  var avgCost = calcAvgCost(a.records);
+  var sellAmount = price * shares;
+  var baseProfit = (price - avgCost) * shares;
+  var estProfit = baseProfit - fee;
+  var estProfitAmount = sellAmount;
+
+  panel.classList.remove('pp-hidden');
+  var valEl = document.getElementById('ppValue');
+  if (estProfit > 0) {
+    valEl.textContent = '+' + estProfit.toFixed(2);
+    valEl.className = 'pp-val green';
+  } else if (estProfit < 0) {
+    valEl.textContent = estProfit.toFixed(2);
+    valEl.className = 'pp-val red';
+  } else {
+    valEl.textContent = estProfit.toFixed(2);
+    valEl.className = 'pp-val blue';
+  }
+  document.getElementById('ppAmount').textContent = '\uFFE5' + estProfitAmount.toFixed(2) + '(不含手续费)';
+  document.getElementById('ppFee').textContent = '\uFFE5' + fee.toFixed(2);
+  var hint = '按持仓成本 \uFFE5' + avgCost.toFixed(4) + ' 测算';
+  if (currentShares <= 0) hint += ' · 当前无持仓';
+  document.getElementById('ppHint').textContent = hint;
+}
+
+/* ---------- 可视化分析 ---------- */
+
+function switchViz(mode) {
+  var dailyBtn = document.getElementById('vizDailyBtn');
+  var totalBtn = document.getElementById('vizTotalBtn');
+  var dailyPanel = document.getElementById('vizDailyPanel');
+  var totalPanel = document.getElementById('vizTotalPanel');
+  if (mode === 'daily') {
+    dailyBtn.classList.add('active');
+    totalBtn.classList.remove('active');
+    dailyPanel.className = 'show';
+    totalPanel.className = '';
+  } else {
+    totalBtn.classList.add('active');
+    dailyBtn.classList.remove('active');
+    totalPanel.className = 'show';
+    dailyPanel.className = '';
+  }
+  renderViz();
+}
+
+/* 按日期聚合每日数据：买入金额/卖出金额/已实现盈亏 */
+function buildDailyData(records) {
+  var daily = {}; // date -> {buyAmt, sellAmt, profit}
+  var eachProfits = calcEachRealizedProfit(records);
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    var d = String(r.date);
+    if (!daily[d]) daily[d] = { buyAmt: 0, sellAmt: 0, profit: 0 };
+    if (r.type === 'buy') {
+      daily[d].buyAmt += r.price * r.shares + r.fee;
+    } else {
+      daily[d].sellAmt += r.price * r.shares - r.fee;
+      var p = eachProfits[i];
+      if (p !== null && p !== undefined) daily[d].profit += p;
+    }
+  }
+  var dates = Object.keys(daily).sort();
+  var out = [];
+  for (var j = 0; j < dates.length; j++) {
+    out.push({
+      date: dates[j],
+      buyAmt: daily[dates[j]].buyAmt,
+      sellAmt: daily[dates[j]].sellAmt,
+      profit: daily[dates[j]].profit
+    });
+  }
+  return out;
+}
+
+/* 生成渐变背景的Canvas */
+function drawChart(canvas, drawFn) {
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width;
+  var h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  // 背景
+  var bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#101d2b');
+  bg.addColorStop(1, '#0c1622');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  drawFn(ctx, w, h);
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function hexToRgba(hex, a) {
+  var c = String(hex).replace('#', '');
+  var r = parseInt(c.substr(0, 2), 16);
+  var g = parseInt(c.substr(2, 2), 16);
+  var b = parseInt(c.substr(4, 2), 16);
+  return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+
+function lighten(hex, amt) {
+  var c = String(hex).replace('#', '');
+  var r = parseInt(c.substr(0, 2), 16);
+  var g = parseInt(c.substr(2, 2), 16);
+  var b = parseInt(c.substr(4, 2), 16);
+  r = Math.max(0, Math.min(255, Math.round(r + (255 - r) * amt)));
+  g = Math.max(0, Math.min(255, Math.round(g + (255 - g) * amt)));
+  b = Math.max(0, Math.min(255, Math.round(b + (255 - b) * amt)));
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+var CHART_FONT = '"PingFang SC","Microsoft YaHei",-apple-system,sans-serif';
+
+function strokeSmooth(ctx, pts, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (var i = 1; i < pts.length; i++) {
+    var xc = (pts[i - 1][0] + pts[i][0]) / 2;
+    var yc = (pts[i - 1][1] + pts[i][1]) / 2;
+    ctx.quadraticCurveTo(pts[i - 1][0], pts[i - 1][1], xc, yc);
+  }
+  ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+  ctx.stroke();
+}
+
+/* 通用柱状图：labels + 系列。支持 opts.colors（单系列每柱颜色） */
+function drawBarChart(canvas, labels, series, opts) {
+  opts = opts || {};
+  drawChart(canvas, function(ctx, w, h) {
+    var pad = { top: 60, right: 32, bottom: 70, left: 98 };
+    var chartW = w - pad.left - pad.right;
+    var chartH = h - pad.top - pad.bottom;
+    var maxVal = 0;
+    for (var i = 0; i < series.length; i++) {
+      for (var j = 0; j < series[i].data.length; j++) {
+        if (series[i].data[j] > maxVal) maxVal = series[i].data[j];
+      }
+    }
+    if (opts.trend && opts.trend.data) {
+      for (var tj = 0; tj < opts.trend.data.length; tj++) {
+        if (opts.trend.data[tj] > maxVal) maxVal = opts.trend.data[tj];
+      }
+    }
+    if (maxVal <= 0) maxVal = 1;
+    // 虚线网格 + Y轴标签
+    ctx.font = '14px ' + CHART_FONT;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#223344';
+    ctx.lineWidth = 1;
+    var gridLines = 4;
+    for (var g = 0; g <= gridLines; g++) {
+      var y = pad.top + chartH - (chartH * g / gridLines);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(w - pad.right, y);
+      ctx.stroke();
+      var labelVal = maxVal * g / gridLines;
+      ctx.fillStyle = '#7f8fa0';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(formatYAxis(labelVal), pad.left - 10, y);
+    }
+    ctx.textBaseline = 'alphabetic';
+    ctx.setLineDash([]);
+    var groupW = chartW / labels.length;
+    // 单系列+每柱颜色模式
+    if (series.length === 1 && opts.colors && opts.colors.length === labels.length) {
+      var data = series[0].data;
+      var barW = Math.max(8, groupW * 0.62);
+      var gap = (groupW - barW) / 2;
+      for (var j = 0; j < labels.length; j++) {
+        drawBarRect(ctx, pad.left + j * groupW + gap, pad.top + chartH, barW, data[j], maxVal, chartH, opts.colors[j]);
+      }
+    } else {
+      var barW = groupW * 0.7 / series.length;
+      for (var s = 0; s < series.length; s++) {
+        for (var j = 0; j < labels.length; j++) {
+          var x = pad.left + j * groupW + groupW * 0.15 + s * barW;
+          drawBarRect(ctx, x, pad.top + chartH, barW - 2, series[s].data[j], maxVal, chartH, series[s].color);
+        }
+      }
+    }
+    // X轴标签
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 15px ' + CHART_FONT;
+    var maxLabels = 12;
+    var step = Math.ceil(labels.length / maxLabels);
+    for (var j = 0; j < labels.length; j++) {
+      if (j % step === 0) {
+        var x = pad.left + j * groupW + groupW / 2;
+        var lc = (opts.labelColors && opts.labelColors[j]) ? opts.labelColors[j] : '#a5b4c4';
+        ctx.fillStyle = lc;
+        ctx.fillText(shortLabel(labels[j]), x, h - pad.bottom + 24);
+      }
+    }
+  });
+}
+
+function drawBarRect(ctx, x, yBase, barW, val, maxVal, chartH, color) {
+  if (val <= 0) return;
+  var valH = chartH * val / maxVal;
+  var yTop = yBase - valH;
+  var r = Math.max(2, Math.min(8, barW / 2, valH));
+  // 柱体阴影
+  ctx.save();
+  ctx.shadowColor = hexToRgba(color, 0.55);
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 3;
+  // 多层渐变柱体（顶部亮 -> 中部本色 -> 底部暗）
+  var grad = ctx.createLinearGradient(0, yTop, 0, yBase);
+  grad.addColorStop(0, lighten(color, 0.42));
+  grad.addColorStop(0.42, color);
+  grad.addColorStop(1, lighten(color, -0.22));
+  ctx.fillStyle = grad;
+  roundRectPath(ctx, x, yTop, barW, valH, r);
+  ctx.fill();
+  ctx.restore();
+  // 左侧光泽高光条
+  ctx.save();
+  roundRectPath(ctx, x, yTop, barW, valH, r);
+  ctx.clip();
+  var gloss = ctx.createLinearGradient(0, 0, barW, 0);
+  gloss.addColorStop(0, 'rgba(255,255,255,0.30)');
+  gloss.addColorStop(0.28, 'rgba(255,255,255,0.06)');
+  gloss.addColorStop(0.6, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gloss;
+  ctx.fillRect(x, yTop, barW, valH);
+  ctx.restore();
+  // 顶部描边高光
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  roundRectPath(ctx, x + 0.5, yTop + 0.5, barW - 1, valH - 1, r);
+  ctx.stroke();
+  // 数值标签（药丸背景 + 亮色文字）
+  var txt = formatBarValue(val);
+  ctx.font = 'bold 15px ' + CHART_FONT;
+  var tw = ctx.measureText(txt).width;
+  var bh = 27, bw = tw + 20;
+  var bx = x + barW / 2 - bw / 2;
+  var by = yTop - bh - 6;
+  if (by < 4) by = yTop + 4; // 柱子太靠顶时标签放柱内
+  ctx.fillStyle = 'rgba(6,16,26,0.9)';
+  roundRectPath(ctx, bx, by, bw, bh, 10);
+  ctx.fill();
+  ctx.strokeStyle = hexToRgba(color, 0.85);
+  ctx.lineWidth = 1;
+  roundRectPath(ctx, bx, by, bw, bh, 10);
+  ctx.stroke();
+  ctx.fillStyle = lighten(color, 0.35);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(txt, x + barW / 2, by + bh / 2 + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function formatBarValue(v) {
+  var abs = Math.abs(v);
+  if (abs >= 10000) return (v / 10000).toFixed(1) + 'w';
+  if (abs >= 1000) return (v / 1000).toFixed(1) + 'k';
+  return v.toFixed(0);
+}
+
+/* 折线图：labels + 数据系列（平滑曲线+渐变面积+数值标签） */
+function drawLineChart(canvas, labels, series, opts) {
+  opts = opts || {};
+  drawChart(canvas, function(ctx, w, h) {
+    var pad = { top: 58, right: 32, bottom: 68, left: 98 };
+    var chartW = w - pad.left - pad.right;
+    var chartH = h - pad.top - pad.bottom;
+    var maxVal = 0, minVal = 0;
+    for (var i = 0; i < series.length; i++) {
+      for (var j = 0; j < series[i].data.length; j++) {
+        var v = series[i].data[j];
+        if (v > maxVal) maxVal = v;
+        if (v < minVal) minVal = v;
+      }
+    }
+    if (maxVal > 0 && Math.abs(minVal) < maxVal * 0.05) minVal = 0;
+    if (maxVal === minVal) maxVal = minVal + 1;
+    // 虚线网格
+    ctx.font = '14px ' + CHART_FONT;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#223344';
+    ctx.lineWidth = 1;
+    var gridLines = 4;
+    for (var g = 0; g <= gridLines; g++) {
+      var y = pad.top + chartH - (chartH * g / gridLines);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(w - pad.right, y);
+      ctx.stroke();
+      var val = minVal + (maxVal - minVal) * g / gridLines;
+      ctx.fillStyle = '#7f8fa0';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(formatYAxis(val), pad.left - 10, y);
+    }
+    ctx.textBaseline = 'alphabetic';
+    ctx.setLineDash([]);
+    // 零基线（如果有负数）
+    if (minVal < 0) {
+      var zeroY = pad.top + chartH - (chartH * (0 - minVal) / (maxVal - minVal));
+      ctx.strokeStyle = '#3a4a5c';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, zeroY);
+      ctx.lineTo(w - pad.right, zeroY);
+      ctx.stroke();
+    }
+    var groupW = chartW / labels.length;
+    for (var s = 0; s < series.length; s++) {
+      var pts = [];
+      for (var j = 0; j < labels.length; j++) {
+        var v = series[s].data[j];
+        var x = pad.left + j * groupW + groupW / 2;
+        var y = pad.top + chartH - (chartH * (v - minVal) / (maxVal - minVal));
+        pts.push([x, y]);
+      }
+      // 渐变面积填充
+      var areaGrad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+      areaGrad.addColorStop(0, hexToRgba(series[s].color, 0.28));
+      areaGrad.addColorStop(1, hexToRgba(series[s].color, 0));
+      ctx.fillStyle = areaGrad;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pad.top + chartH);
+      for (var j = 0; j < pts.length; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+      ctx.lineTo(pts[pts.length - 1][0], pad.top + chartH);
+      ctx.closePath();
+      ctx.fill();
+      // 平滑折线
+      strokeSmooth(ctx, pts, series[s].color, 3);
+      // 数据点
+      for (var j = 0; j < pts.length; j++) {
+        ctx.beginPath();
+        ctx.arc(pts[j][0], pts[j][1], 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#0c1622';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(pts[j][0], pts[j][1], 2.8, 0, Math.PI * 2);
+        ctx.fillStyle = series[s].color;
+        ctx.fill();
+      }
+      // 数值标签
+      if (opts.showValues !== false) {
+        ctx.fillStyle = series[s].color;
+        ctx.font = 'bold 14px ' + CHART_FONT;
+        ctx.textAlign = 'center';
+        for (var j = 0; j < pts.length; j++) {
+          ctx.fillText(formatBarValue(series[s].data[j]), pts[j][0], pts[j][1] - 10);
+        }
+      }
+    }
+    // X轴标签
+    ctx.fillStyle = '#a5b4c4';
+    ctx.font = 'bold 15px ' + CHART_FONT;
+    ctx.textAlign = 'center';
+    var maxLabels = 12;
+    var step = Math.ceil(labels.length / maxLabels);
+    for (var j = 0; j < labels.length; j++) {
+      if (j % step === 0) {
+        var x = pad.left + j * groupW + groupW / 2;
+        ctx.fillText(shortLabel(labels[j]), x, h - pad.bottom + 24);
+      }
+    }
+  });
+}
+
+function shortDate(d) {
+  var s = String(d);
+  if (s.length >= 10) return s.slice(5); // MM-DD
+  return s;
+}
+
+function formatYAxis(v) {
+  if (Math.abs(v) >= 10000) return (v / 10000).toFixed(1) + 'w';
+  if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + 'k';
+  return v.toFixed(0);
+}
+
+function shortLabel(s) {
+  s = String(s);
+  if (s.length > 8) return s.slice(5);
+  return s;
+}
+
+/* 渲染可视化 */
+function renderViz() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  var records = a.records || [];
+
+  var dailyPanel = document.getElementById('vizDailyPanel');
+  var totalPanel = document.getElementById('vizTotalPanel');
+
+  if (dailyPanel && dailyPanel.classList.contains('show')) {
+    renderDailyViz(records);
+  }
+  if (totalPanel && totalPanel.classList.contains('show')) {
+    renderTotalViz(records);
+  }
+}
+
+function renderDailyViz(records) {
+  // 每笔操作（按时间升序）用于柱状图 + 总盈亏累计折线
+  var eachProfits = calcEachRealizedProfit(records);
+  var profitMap = {};
+  for (var m = 0; m < records.length; m++) profitMap[String(records[m].id)] = eachProfits[m];
+  var ops = records.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
+  var opLabels = [];
+  var opColors = [];
+  var opAmounts = [];
+  var cumLabels = [];
+  var cumValues = [];
+  cumLabels.push('起点');
+  cumValues.push(0);
+  var cum = 0;
+  var buySeq = {}, sellSeq = {};
+  for (var i = 0; i < ops.length; i++) {
+    var r = ops[i];
+    var dk = String(r.date || '');
+    if (r.type === 'buy') {
+      buySeq[dk] = (buySeq[dk] || 0) + 1;
+      opLabels.push('买' + buySeq[dk]);
+    } else {
+      sellSeq[dk] = (sellSeq[dk] || 0) + 1;
+      opLabels.push('卖' + sellSeq[dk]);
+    }
+    opColors.push(r.type === 'buy' ? '#4caf50' : '#f44336');
+    opAmounts.push(r.price * r.shares);
+    cumLabels.push(shortDate(r.date));
+    if (r.type === 'sell') {
+      var p = profitMap[String(r.id)];
+      if (p !== null && p !== undefined) cum += p;
+    }
+    cumValues.push(cum);
+  }
+
+  // 汇总统计（按天）
+  var dailyData = buildDailyData(records);
+  var totalBuy = 0, totalSell = 0, totalProfit = 0;
+  for (var i = 0; i < dailyData.length; i++) {
+    totalBuy += dailyData[i].buyAmt;
+    totalSell += dailyData[i].sellAmt;
+    totalProfit += dailyData[i].profit;
+  }
+  document.getElementById('dzDays').textContent = dailyData.length;
+  document.getElementById('dzBuyAmt').textContent = formatMoney(totalBuy);
+  document.getElementById('dzSellAmt').textContent = formatMoney(totalSell);
+  setVizProfit('dzProfit', totalProfit);
+
+  if (ops.length === 0) {
+    drawEmpty(document.getElementById('dailyAmountChart'));
+    drawEmpty(document.getElementById('dailyProfitChart'));
+    return;
+  }
+  // 每次买卖操作柱状图（单系列 + 每柱颜色，绿=买红=卖）
+  drawBarChart(document.getElementById('dailyAmountChart'), opLabels, [
+    { data: opAmounts, color: '#4caf50' }
+  ], { colors: opColors, labelColors: opColors, showValues: true });
+  // 总盈亏合计折线（从0起点，买入不计，卖出累计）
+  drawLineChart(document.getElementById('dailyProfitChart'), cumLabels, [
+    { data: cumValues, color: '#ff9800', areaColor: 'rgba(255,152,0,0.25)' }
+  ], { showValues: true });
+}
+
+function renderTotalViz(records) {
+  var buyCount = 0, sellCount = 0, buyAmt = 0, sellAmt = 0, allFees = 0;
+  var realized = calcRealizedProfit(records);
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    allFees += r.fee;
+    if (r.type === 'buy') {
+      buyCount++; buyAmt += r.price * r.shares + r.fee;
+    } else {
+      sellCount++; sellAmt += r.price * r.shares - r.fee;
+    }
+  }
+  var curShares = calcCurrentShares(records);
+  var avgCost = calcAvgCost(records);
+  var curPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+  var floating = (curPrice > 0 && curShares > 0) ? (curPrice - avgCost) * curShares : 0;
+  var totalProfit = realized + floating;
+
+  document.getElementById('tzOps').textContent = records.length;
+  document.getElementById('tzBuyCnt').textContent = buyCount;
+  document.getElementById('tzSellCnt').textContent = sellCount;
+  document.getElementById('tzBuyAmt').textContent = formatMoney(buyAmt);
+  document.getElementById('tzSellAmt').textContent = formatMoney(sellAmt);
+  setVizProfit('tzRealized', realized);
+  setVizProfit('tzFloating', floating);
+  setVizProfit('tzTotal', totalProfit);
+
+  var dailyData = buildDailyData(records);
+  if (records.length === 0) {
+    drawEmpty(document.getElementById('totalStructureChart'));
+    drawEmpty(document.getElementById('totalProfitChart'));
+    return;
+  }
+  // 每日买入合计 / 卖出合计（柱状图，2个系列）
+  var dayLabels = dailyData.map(function(d) { return d.date; });
+  var dayBuy = dailyData.map(function(d) { return d.buyAmt; });
+  var daySell = dailyData.map(function(d) { return d.sellAmt; });
+  drawBarChart(document.getElementById('totalStructureChart'), dayLabels, [
+    { data: dayBuy, color: '#4caf50' },
+    { data: daySell, color: '#f44336' }
+  ], { showValues: true });
+  // 盈亏构成（环形图）
+  drawProfitPie(document.getElementById('totalProfitChart'), realized, floating, buyAmt, sellAmt);
+}
+
+function drawEmpty(canvasEl) {
+  if (!canvasEl) return;
+  drawChart(canvasEl, function(ctx, w, h) {
+    ctx.fillStyle = '#5a6a7a';
+    ctx.font = '19px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('暂无数据，录入交易后自动生成图表', w / 2, h / 2);
+  });
+}
+
+function drawProfitPie(canvasEl, realized, floating, buyAmt, sellAmt) {
+  if (!canvasEl) return;
+  drawChart(canvasEl, function(ctx, w, h) {
+    var cx = w / 2, cy = h / 2, r = Math.min(w, h) / 2 - 40;
+    // 环形图中心
+    var hole = r * 0.55;
+    var total = Math.abs(realized) + Math.abs(floating);
+    if (total <= 0) {
+      ctx.fillStyle = '#5a6a7a';
+      ctx.font = '19px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('暂无盈亏数据', cx, cy);
+      return;
+    }
+    var slices = [
+      { label: '已实现盈亏', val: Math.abs(realized), color: '#ff9800' },
+      { label: '浮动盈亏', val: Math.abs(floating), color: '#29b6f6' }
+    ];
+    var start = -Math.PI / 2;
+    for (var i = 0; i < slices.length; i++) {
+      if (slices[i].val <= 0) continue;
+      var angle = 2 * Math.PI * slices[i].val / total;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, start + angle);
+      ctx.closePath();
+      ctx.fillStyle = slices[i].color;
+      ctx.fill();
+      start += angle;
+    }
+    // 挖孔形成环形
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(cx, cy, hole, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    // 中心文字
+    ctx.fillStyle = '#e0e0e0';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.textAlign = 'center';
+    var totalProfit = realized + floating;
+    ctx.fillText((totalProfit >= 0 ? '+' : '') + totalProfit.toFixed(2), cx, cy - 6);
+    ctx.fillStyle = '#8a9baa';
+    ctx.font = '15px sans-serif';
+    ctx.fillText('总盈亏（元）', cx, cy + 22);
+    // 图例说明
+    ctx.font = '19px sans-serif';
+    ctx.textAlign = 'left';
+    var legendX = cx + r + 30;
+    var legendY = cy - 20;
+    if (legendX + 120 > w) legendX = cx - r - 110;
+    if (legendX < 10) legendX = 10;
+    var li = 0;
+    var legendItems = [
+      { c: '#ff9800', t: '已实现盈亏 ' + (realized >= 0 ? '+' : '') + realized.toFixed(2) },
+      { c: '#29b6f6', t: '浮动盈亏 ' + (floating >= 0 ? '+' : '') + floating.toFixed(2) }
+    ];
+    for (var j = 0; j < legendItems.length; j++) {
+      ctx.fillStyle = legendItems[j].c;
+      ctx.fillRect(legendX, legendY + li * 22, 12, 12);
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillText(legendItems[j].t, legendX + 18, legendY + li * 22 + 11);
+      li++;
+    }
+  });
+}
+
+function formatMoney(v) {
+  return '\uFFE5' + v.toFixed(2);
+}
+
+function setVizProfit(id, v) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = formatMoney(v);
+  if (v > 0) el.className = 'vs-val green';
+  else if (v < 0) el.className = 'vs-val red';
+  else el.className = 'vs-val blue';
+}
+
+function renderTable(records) {
+  var tbody = document.getElementById('tradeBody');
+  var table = document.getElementById('tradeTable');
+  var emptyTip = document.getElementById('emptyTip');
+
+  if (!records || records.length === 0) {
+    table.style.display = 'none';
+    emptyTip.style.display = 'block';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  table.style.display = 'table';
+  emptyTip.style.display = 'none';
+
+  var sorted = records.slice().sort(function(a, b) {
+    return b.timestamp - a.timestamp;
+  });
+
+  var eachProfits = calcEachRealizedProfit(records);
+  var profitMap = {};
+  for (var m = 0; m < records.length; m++) {
+    profitMap[String(records[m].id)] = eachProfits[m];
+  }
+
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var r = sorted[i];
+    var amount = r.price * r.shares;
+    var profit = profitMap[String(r.id)];
+    var profitStr = '';
+    var profitClass = '';
+    if (r.type === 'sell' && profit !== null && profit !== undefined) {
+      profitStr = (profit >= 0 ? '+' : '') + '\uFFE5' + profit.toFixed(2);
+      profitClass = profit >= 0 ? 'profit-green' : 'profit-red';
+    } else {
+      profitStr = '-';
+    }
+
+    html += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + escHtml(String(r.date)) + '</td>' +
+      '<td class="' + (r.type === 'buy' ? 'type-buy' : 'type-sell') + '">' +
+        (r.type === 'buy' ? '买入' : '卖出') + '</td>' +
+      '<td>' + r.price.toFixed(3) + '</td>' +
+      '<td>' + r.shares.toLocaleString() + '</td>' +
+      '<td>\uFFE5' + amount.toFixed(2) + '</td>' +
+      '<td>\uFFE5' + r.fee.toFixed(2) + '</td>' +
+      '<td class="' + profitClass + '">' + profitStr + '</td>' +
+      '<td><button class="btn btn-delete" data-id="' + r.id + '">删除</button></td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ---------- 记录操作 ---------- */
+
+function deleteRecord(id) {
+  var a = getCurrentArchive();
+  if (!a) return;
+  if (!confirm('确认删除这条记录？')) return;
+  a.records = a.records.filter(function(r) { return String(r.id) !== String(id); });
+  saveData();
+  renderArchiveSelect();
+  refreshAll();
+  showToast('记录已删除');
+}
+
+function clearAll() {
+  var a = getCurrentArchive();
+  if (!a) return;
+  if (a.records.length === 0) { showToast('当前档案没有记录可清空', true); return; }
+  if (!confirm('确认清空当前档案「' + a.name + '」的全部记录？此操作不可恢复！')) return;
+  if (!confirm('再次确认：真的要清空全部交易记录吗？')) return;
+  a.records = [];
+  saveData();
+  renderArchiveSelect();
+  refreshAll();
+  showToast('当前档案记录已清空');
+}
+
+function exportData() {
+  var dataStr = JSON.stringify({ archives: archives, currentArchiveId: currentArchiveId }, null, 2);
+  var blob = new Blob([dataStr], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'etf_archives_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('全部档案数据已导出');
+}
+
+function showToast(msg, isError) {
+  var toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(function() {
+    toast.className = 'toast' + (isError ? ' error' : '');
+  }, 2500);
+}
+
+/* 事件委托：删除记录按钮 */
+document.getElementById('tradeBody').addEventListener('click', function(e) {
+  var btn = e.target;
+  if (btn && btn.classList && btn.classList.contains('btn-delete')) {
+    deleteRecord(btn.getAttribute('data-id'));
+  }
+});
+
+/* Enter 提交 */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    var t = e.target;
+    if (t && (t.id === 'tradePrice' || t.id === 'tradeShares' || t.id === 'tradeFee')) {
+      addTrade();
+    }
+  }
+});
+
+init();
+</script>
+</body>
+</html>
